@@ -1,0 +1,53 @@
+services:
+  mariadb:
+    image: mariadb:11
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: bitnami_myapp
+      MYSQL_USER: bn_myapp
+      MYSQL_PASSWORD: bitnamipassword
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - laravel-network
+    healthcheck:
+      test: ['CMD', 'healthcheck.sh', '--connect', '--innodb_initialized']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+  application:
+    image: webdevops/php-nginx:8.4
+    working_dir: /app
+    environment:
+      - WEB_DOCUMENT_ROOT=/app/public
+      - DB_CONNECTION=mysql
+      - DB_HOST=mariadb
+      - DB_PORT=3306
+      - DB_DATABASE=bitnami_myapp
+      - DB_USERNAME=bn_myapp
+      - DB_PASSWORD=bitnamipassword
+    ports:
+      - '8000:80'
+    volumes:
+      - './src:/app'
+      - storage_data:/app/storage        
+      - cache_data:/app/bootstrap/cache  
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - laravel-network
+
+volumes:
+  mariadb_data:
+    driver: local
+  storage_data:    # ← nuevo  
+    driver: local
+  cache_data:      # ← nuevo
+    driver: local
+
+networks:
+  laravel-network:
+    driver: bridge
